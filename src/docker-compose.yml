@@ -1,0 +1,80 @@
+name: bad-brains-api
+
+services:
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - map-service
+      - station-service
+    environment:
+      - STATION_SERVICE_URL=http://station-service:8000
+      - AUTH_SERVICE_URL=http://auth-service:3000
+      - MAP_SERVICE_URL=http://map-service:8000
+    networks:
+      - univ-network
+
+  map-service:
+    build: ./map-service
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URL=mongodb://mongo_user:mongo_pass@mongodb:27017/map_db
+    networks:
+      - bad-brains-network
+
+  station-service:
+    build: ./station-service
+    networks:
+      - bad-brains-network
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres_user
+      - DB_PASSWORD=postgres_pass
+      - DB_NAME=user_db
+      - JWT_SECRET=example_secret
+    networks:
+      - bad-brains-network
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres_user
+      POSTGRES_PASSWORD: postgres_pass
+      POSTGRES_DB: user_db
+    networks:
+      - bad-brains-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
+
+  mongodb:
+    image: mongo:4.4
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: mongo_pass
+    # ports:  DEBUGGING WITH MONGOSH
+    #   - "27017:27017"
+    networks:
+      - bad-brains-network
+    volumes:
+      - mongodb_data:/data/db
+      - ./init/init_mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
+    command: mongod --quiet --logpath /dev/null  # No logs in stdo
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
+networks:
+  bad-brains-network:
+    driver: bridge
