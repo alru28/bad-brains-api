@@ -34,7 +34,7 @@ Esto lanzara el servicio y sus dependencias, como MongoDB o PostgreSQL.
 
 ## Uso
 
-Once the installation is complete, you can access Deusto AI-Sec programatic API by opening your web browser and navigating to:
+Una vez realizada la instalación, puedes acceder a la API Programática en el siguiente enlace:
 
 > http://localhost:8000/docs
 
