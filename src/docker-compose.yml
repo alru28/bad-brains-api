@@ -2,32 +2,18 @@ name: bad-brains-api
 
 services:
 
-  gateway:
-    build: ./gateway
+  bad-brains-service:
+    build: ./bad-brains-service
     ports:
       - "8080:8080"
     depends_on:
       - auth-service
-      - map-service
-      - station-service
-    environment:
-      - STATION_SERVICE_URL=http://station-service:8000
-      - AUTH_SERVICE_URL=http://auth-service:3000
-      - MAP_SERVICE_URL=http://map-service:8000
-    networks:
-      - univ-network
-
-  map-service:
-    build: ./map-service
-    depends_on:
       - mongodb
     environment:
-      - MONGODB_URL=mongodb://mongo_user:mongo_pass@mongodb:27017/map_db
-    networks:
-      - bad-brains-network
-
-  station-service:
-    build: ./station-service
+      - MONGODB_URL=mongodb://mongo_user:mongo_pass@mongodb:27017
+      - MAP_DB=map_db
+      - STATION_DB=station_db
+      - AUTH_SERVICE_URL=http://auth-service:3000
     networks:
       - bad-brains-network
 

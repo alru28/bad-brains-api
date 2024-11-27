@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: BadBrains API
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8080
+paths:
+  /auth/test:
+    get:
+      tags: ["Auth Service"]
+      summary: Test Auth Service
+      description: Test endpoint to verify Auth service functionality.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /auth/register:
+    post:
+      tags: ["Auth Service"]
+      summary: Register a new user
+      description: Register a new user with username, email, and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - email
+                - password
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: User already exists or missing fields
+        "500":
+          description: Server error
+
+  /auth/login:
+    post:
+      tags: ["Auth Service"]
+      summary: User login
+      description: Log in a user with username and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        "200":
+          description: Token returned upon successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Invalid credentials or missing fields
+        "500":
+          description: Server error
+
+  /auth/verify:
+    get:
+      tags: ["Auth Service"]
+      summary: Verify JWT Token
+      description: Verify the JWT token from the Authorization header.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      username:
+                        type: string
+                      email:
+                        type: string
+        "401":
+          description: Invalid or missing token
+
+  /stations/{station_id}/safes:
+    get:
+      tags: ["Stations Service"]
+      summary: Retrieve all safes for a given station
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of safes for the station
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  station_id:
+                    type: string
+                  address:
+                    type: string
+                  safes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        safe_id:
+                          type: integer
+                        reserved_until:
+                          type: string
+                          format: date-time
+                        pin:
+                          type: string
+                          nullable: true
+  /stations/{station_id}/safes/reserve:
+    post:
+      tags: ["Stations Service"]
+      summary: Reserve a safe for a specified time with a PIN
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                safe_id:
+                  type: integer
+                pin:
+                  type: string
+                duration_minutes:
+                  type: integer
+      responses:
+        "200":
+          description: Safe reserved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  safe_id:
+                    type: integer
+                  reserved_until:
+                    type: string
+                    format: date-time
+  /stations/{station_id}/safes/unlock:
+    post:
+      tags: ["Stations Service"]
+      summary: Unlock a safe using a PIN
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                safe_id:
+                  type: integer
+                pin:
+                  type: string
+      responses:
+        "200":
+          description: Safe unlocked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  safe_id:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
