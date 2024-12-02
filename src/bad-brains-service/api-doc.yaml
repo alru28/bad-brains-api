@@ -122,6 +122,8 @@ paths:
           required: true
           schema:
             type: string
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
       responses:
         "200":
           description: List of safes for the station
@@ -147,6 +149,7 @@ paths:
                         pin:
                           type: string
                           nullable: true
+
   /stations/{station_id}/safes/reserve:
     post:
       tags: ["Stations Service"]
@@ -170,6 +173,8 @@ paths:
                   type: string
                 duration_minutes:
                   type: integer
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
       responses:
         "200":
           description: Safe reserved successfully
@@ -185,6 +190,7 @@ paths:
                   reserved_until:
                     type: string
                     format: date-time
+
   /stations/{station_id}/safes/unlock:
     post:
       tags: ["Stations Service"]
@@ -206,6 +212,8 @@ paths:
                   type: integer
                 pin:
                   type: string
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
       responses:
         "200":
           description: Safe unlocked successfully
@@ -218,6 +226,81 @@ paths:
                     type: string
                   safe_id:
                     type: integer
+
+  /map/{location_id}:
+    get:
+      tags: ["Maps Service"]
+      summary: Retrieve all information related to a location
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
+      responses:
+        "200":
+          description: Location details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  location_id:
+                    type: string
+                  address:
+                    type: string
+                  information:
+                    type: string
+                  type:
+                    type: string
+                    enum:
+                      - LOCATION
+                      - STATION
+                  comment:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        text:
+                          type: string
+
+  /map/{location_id}/comment:
+    post:
+      tags: ["Maps Service"]
+      summary: Post a comment for a location
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
+      responses:
+        "200":
+          description: Comment posted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  location_id:
+                    type: string
 
 components:
   securitySchemes:

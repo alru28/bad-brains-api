@@ -10,9 +10,8 @@ services:
       - auth-service
       - mongodb
     environment:
-      - MONGODB_URL=mongodb://mongo_user:mongo_pass@mongodb:27017
-      - MAP_DB=map_db
-      - STATION_DB=station_db
+      - MONGODB_URL=mongodb://mongo_user:mongo_pass@mongodb:27017/
+      - DB_NAME=map_db
       - AUTH_SERVICE_URL=http://auth-service:3000
     networks:
       - bad-brains-network

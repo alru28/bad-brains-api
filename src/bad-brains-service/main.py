@@ -7,24 +7,18 @@ import yaml
 import httpx
 import os
 import time
-import logging
-
-# Use FastAPI Logger
-logger = logging.getLogger("uvicorn")
 
 # ENV
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:3000")
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://mongo_user:mongo_pass@mongodb:27017")
-MAP_DB = os.getenv("MAP_DB", "map_db")
-STATION_DB = os.getenv("STATION_DB", "station_db")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://mongo_user:mongo_pass@mongodb:27017/map_db")
+DB_NAME = os.getenv("DB_NAME", "map_db")
 
 # MONGODB
-client_station = MongoClient(MONGODB_URL + "/" + STATION_DB)
-client_map = MongoClient(MONGODB_URL + "/" + MAP_DB)
-station_db = client_station.station_db
-map_db = client_map.map_db
+client = MongoClient(MONGODB_URL)
+db = client.map_db
+locations_collection = db["locations"]
+stations_collection = db["stations"]
 
-stations_collection = station_db.stations
 
 # Models
 class ReserveSafeRequest(BaseModel):
@@ -35,6 +29,9 @@ class ReserveSafeRequest(BaseModel):
 class UnlockSafeRequest(BaseModel):
     safe_id: int
     pin: str
+    
+class CommentRequest(BaseModel):
+    text: str
 
 # HELPER FUNCTIONS
 def get_station(station_id: str):
@@ -42,6 +39,12 @@ def get_station(station_id: str):
     if not station:
         raise HTTPException(status_code=404, detail="Station not found")
     return station
+
+def get_location(location_id: str):
+    location = locations_collection.find_one({"location_id": location_id})
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return location
 
 def unlock_safe_after_duration(station_id: str, safe_id: int, duration_minutes: int):
     # Wait for the specified duration
@@ -56,7 +59,7 @@ def unlock_safe_after_duration(station_id: str, safe_id: int, duration_minutes: 
         safe["reserved_until"] = None
         safe["pin"] = None
         stations_collection.update_one({"station_id": station_id, "safes.safe_id": safe_id}, {"$set": {"safes.$": safe}})
-        logger.info(f"Safe {safe_id} at station {station_id} has been automatically unlocked after reservation expiration.")
+        print(f"Safe {safe_id} at station {station_id} has been automatically unlocked after reservation expiration.")
 
 # Verify JWT
 async def verify_jwt(request: Request):
@@ -106,13 +109,13 @@ async def auth_service_proxy(path: str, request: Request):
     return await proxy_request(request, target_url)
 
 # STATIONS
-@app.get("/stations/{station_id}/safes")
+@app.get("/stations/{station_id}/safes", dependencies=[Depends(verify_jwt)])
 async def get_safes(station_id: str):
     """Retrieve all safes for a given station."""
     station = get_station(station_id)
     return {"station_id": station_id, "address": station["address"], "safes": station["safes"]}
 
-@app.post("/stations/{station_id}/safes/reserve")
+@app.post("/stations/{station_id}/safes/reserve", dependencies=[Depends(verify_jwt)])
 async def reserve_safe(station_id: str, request: ReserveSafeRequest, background_tasks: BackgroundTasks):
     """Reserve a safe for a specified time with a PIN."""
     station = get_station(station_id)
@@ -132,7 +135,7 @@ async def reserve_safe(station_id: str, request: ReserveSafeRequest, background_
 
     return {"message": "Safe reserved successfully", "safe_id": request.safe_id, "reserved_until": safe["reserved_until"]}
 
-@app.post("/stations/{station_id}/safes/unlock")
+@app.post("/stations/{station_id}/safes/unlock", dependencies=[Depends(verify_jwt)])
 async def unlock_safe(station_id: str, request: UnlockSafeRequest):
     """Unlock a safe using a PIN."""
     station = get_station(station_id)
@@ -149,6 +152,28 @@ async def unlock_safe(station_id: str, request: UnlockSafeRequest):
     safe["pin"] = None
     stations_collection.update_one({"station_id": station_id, "safes.safe_id": request.safe_id}, {"$set": {"safes.$": safe}})
     return {"message": "Safe unlocked successfully", "safe_id": request.safe_id}
+
+# MAPS
+
+@app.get("/map/{location_id}", dependencies=[Depends(verify_jwt)])
+async def get_location_info(location_id: str):
+    """Retrieve all information related to a location."""
+    location = get_location(location_id)
+    return {"location_id": location_id, "address": location["address"], "information": location["information"], "type": location['type'], "comments": location['comments']}
+
+@app.post("/map/{location_id}/comment", dependencies=[Depends(verify_jwt)])
+async def post_comment(location_id: str, comment: CommentRequest, request: Request):
+    """Post a comment for a location."""
+    username = await verify_jwt(request)  # Extract the username from the JWT
+
+    location = get_location(location_id)
+
+    # Add the comment to the location's comment list
+    locations_collection.update_one(
+        {"location_id": location_id},
+        {"$push": {"comments": {"username": username, "text": comment.text}}}
+    )
+    return {"message": "Comment posted successfully", "location_id": location_id}
 
 
 # CUSTOM DOCS
