@@ -13,6 +13,8 @@ db.locations.insertMany([
     address: "Av. Lehendakari Aguirre 11, Bilbao",
     information: "Non-profit organization for deaf people",
     type: "LOCATION",
+    lat: 43.271586,
+    long: -2.944325,
     comments: [
       { username: "user1", text: "Great location if you are looking for assistance or information regarding deaf accessibility." },
       { username: "user2", text: "Quite a deaf-friendly place!" }
@@ -23,6 +25,8 @@ db.locations.insertMany([
     address: "123 Main St, Cityville",
     information: "Station with multiple charging safes available.",
     type: "STATION",
+    lat: 40.712776,
+    long: -74.005974,
     comments: [
       { username: "user1", text: "Convenient station!" },
       { username: "user3", text: "Pretty convenient when you need to stock quickly on disposable batteries." }
@@ -33,6 +37,8 @@ db.locations.insertMany([
     address: "456 Side St, Townsville",
     information: "Station with charging options for hearing aids.",
     type: "STATION",
+    lat: 34.052235,
+    long: -118.243683,
     comments: [
       { username: "user2", text: "Good station, but needs more slots." }
     ]

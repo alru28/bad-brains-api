@@ -159,7 +159,15 @@ async def unlock_safe(station_id: str, request: UnlockSafeRequest):
 async def get_location_info(location_id: str):
     """Retrieve all information related to a location."""
     location = get_location(location_id)
-    return {"location_id": location_id, "address": location["address"], "information": location["information"], "type": location['type'], "comments": location['comments']}
+    return {
+        "location_id": location_id,
+        "address": location["address"],
+        "information": location["information"],
+        "type": location["type"],
+        "lat": location["lat"],
+        "long": location["long"],
+        "comments": location["comments"]
+    }
 
 @app.post("/map/{location_id}/comment", dependencies=[Depends(verify_jwt)])
 async def post_comment(location_id: str, comment: CommentRequest, request: Request):
