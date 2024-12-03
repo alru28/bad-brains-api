@@ -146,14 +146,14 @@ paths:
                         reserved_until:
                           type: string
                           format: date-time
-                        pin:
+                        username:
                           type: string
                           nullable: true
 
   /stations/{station_id}/safes/reserve:
     post:
       tags: ["Stations Service"]
-      summary: Reserve a safe for a specified time with a PIN
+      summary: Reserve a safe for a specified time.
       parameters:
         - name: station_id
           in: path
@@ -169,8 +169,6 @@ paths:
               properties:
                 safe_id:
                   type: integer
-                pin:
-                  type: string
                 duration_minutes:
                   type: integer
       security:
@@ -194,7 +192,7 @@ paths:
   /stations/{station_id}/safes/unlock:
     post:
       tags: ["Stations Service"]
-      summary: Unlock a safe using a PIN
+      summary: Unlock a safe
       parameters:
         - name: station_id
           in: path
@@ -210,8 +208,6 @@ paths:
               properties:
                 safe_id:
                   type: integer
-                pin:
-                  type: string
       security:
         - bearerAuth: []  # JWT required for this endpoint
       responses:

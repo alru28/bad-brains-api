@@ -23,12 +23,10 @@ stations_collection = db["stations"]
 # Models
 class ReserveSafeRequest(BaseModel):
     safe_id: int
-    pin: str
     duration_minutes: int
 
 class UnlockSafeRequest(BaseModel):
     safe_id: int
-    pin: str
     
 class CommentRequest(BaseModel):
     text: str
@@ -57,7 +55,7 @@ def unlock_safe_after_duration(station_id: str, safe_id: int, duration_minutes: 
     safe = next((s for s in station["safes"] if s["safe_id"] == safe_id), None)
     if safe and safe["reserved_until"] and safe["reserved_until"] < datetime.now():
         safe["reserved_until"] = None
-        safe["pin"] = None
+        safe["username"] = None
         stations_collection.update_one({"station_id": station_id, "safes.safe_id": safe_id}, {"$set": {"safes.$": safe}})
         print(f"Safe {safe_id} at station {station_id} has been automatically unlocked after reservation expiration.")
 
@@ -116,42 +114,44 @@ async def get_safes(station_id: str):
     return {"station_id": station_id, "address": station["address"], "safes": station["safes"]}
 
 @app.post("/stations/{station_id}/safes/reserve", dependencies=[Depends(verify_jwt)])
-async def reserve_safe(station_id: str, request: ReserveSafeRequest, background_tasks: BackgroundTasks):
-    """Reserve a safe for a specified time with a PIN."""
+async def reserve_safe(station_id: str, request: Request, reserve: ReserveSafeRequest, background_tasks: BackgroundTasks):
+    """Reserve a safe for a specified time"""
+    username = await verify_jwt(request)
     station = get_station(station_id)
-    safe = next((s for s in station["safes"] if s["safe_id"] == request.safe_id), None)
+    safe = next((s for s in station["safes"] if s["safe_id"] == reserve.safe_id), None)
     if not safe:
         raise HTTPException(status_code=404, detail="Safe not found")
     if safe["reserved_until"] and safe["reserved_until"] > datetime.now():
         raise HTTPException(status_code=400, detail="Safe is already reserved")
 
     # Update the safe reservation
-    safe["reserved_until"] = datetime.now() + timedelta(minutes=request.duration_minutes)
-    safe["pin"] = request.pin
-    stations_collection.update_one({"station_id": station_id, "safes.safe_id": request.safe_id}, {"$set": {"safes.$": safe}})
+    safe["reserved_until"] = datetime.now() + timedelta(minutes=reserve.duration_minutes)
+    safe["username"] = username
+    stations_collection.update_one({"station_id": station_id, "safes.safe_id": reserve.safe_id}, {"$set": {"safes.$": safe}})
 
     # Background task to unlock the safe after the reservation expires
-    background_tasks.add_task(unlock_safe_after_duration, station_id, request.safe_id, request.duration_minutes)
+    background_tasks.add_task(unlock_safe_after_duration, station_id, reserve.safe_id, reserve.duration_minutes)
 
-    return {"message": "Safe reserved successfully", "safe_id": request.safe_id, "reserved_until": safe["reserved_until"]}
+    return {"message": "Safe reserved successfully", "safe_id": reserve.safe_id, "reserved_until": safe["reserved_until"]}
 
 @app.post("/stations/{station_id}/safes/unlock", dependencies=[Depends(verify_jwt)])
-async def unlock_safe(station_id: str, request: UnlockSafeRequest):
-    """Unlock a safe using a PIN."""
+async def unlock_safe(station_id: str, request: Request, unlock: UnlockSafeRequest):
+    """Unlock a safe."""
+    username = await verify_jwt(request)
     station = get_station(station_id)
-    safe = next((s for s in station["safes"] if s["safe_id"] == request.safe_id), None)
+    safe = next((s for s in station["safes"] if s["safe_id"] == unlock.safe_id), None)
     if not safe:
         raise HTTPException(status_code=404, detail="Safe not found")
     if not safe["reserved_until"] or safe["reserved_until"] < datetime.now():
         raise HTTPException(status_code=400, detail="Safe is not reserved or reservation expired")
-    if safe["pin"] != request.pin:
-        raise HTTPException(status_code=403, detail="Incorrect PIN")
+    if safe["username"] != username:
+        raise HTTPException(status_code=403, detail="You did not reserve this safe")
 
     # Reset the safe
     safe["reserved_until"] = None
-    safe["pin"] = None
-    stations_collection.update_one({"station_id": station_id, "safes.safe_id": request.safe_id}, {"$set": {"safes.$": safe}})
-    return {"message": "Safe unlocked successfully", "safe_id": request.safe_id}
+    safe["username"] = None
+    stations_collection.update_one({"station_id": station_id, "safes.safe_id": unlock.safe_id}, {"$set": {"safes.$": safe}})
+    return {"message": "Safe unlocked successfully", "safe_id": unlock.safe_id}
 
 # MAPS
 
