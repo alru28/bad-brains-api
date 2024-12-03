@@ -18,7 +18,7 @@ client = MongoClient(MONGODB_URL)
 db = client.map_db
 locations_collection = db["locations"]
 stations_collection = db["stations"]
-
+favourites_collection = db["favourites"]
 
 # Models
 class ReserveSafeRequest(BaseModel):
@@ -182,6 +182,33 @@ async def post_comment(location_id: str, comment: CommentRequest, request: Reque
         {"$push": {"comments": {"username": username, "text": comment.text}}}
     )
     return {"message": "Comment posted successfully", "location_id": location_id}
+
+# FAVOURITES
+@app.post("/favourites", dependencies=[Depends(verify_jwt)])
+async def add_favourite_location(request: Request, location_id: str):
+    """Add a location to the user's favourites."""
+    username = await verify_jwt(request)
+    location = get_location(location_id)  # Ensure the location exists
+
+    # Check if the location is already a favourite
+    existing_favourite = favourites_collection.find_one({"username": username, "location_id": location_id})
+    if existing_favourite:
+        raise HTTPException(status_code=400, detail="Location is already in favourites")
+
+    # Add the favourite
+    favourites_collection.insert_one({"username": username, "location_id": location_id})
+    return {"message": "Location added to favourites", "location_id": location_id}
+
+@app.get("/favourites", dependencies=[Depends(verify_jwt)])
+async def get_favourite_locations(request: Request):
+    """Retrieve all favourite locations for the user."""
+    username = await verify_jwt(request)
+
+    # Get the user's favourite locations
+    favourites = favourites_collection.find({"username": username})
+    location_ids = [favourite["location_id"] for favourite in favourites]
+
+    return {"favourite_locations": location_ids}
 
 
 # CUSTOM DOCS

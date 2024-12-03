@@ -65,3 +65,11 @@ db.stations.insertMany([
     ]
   }
 ]);
+
+// Favourites
+db.createCollection("favourites");
+
+db.favourites.insertMany([
+  { username: "user1", location_id: "location_1" },
+  { username: "user2", location_id: "station_1" }
+]);

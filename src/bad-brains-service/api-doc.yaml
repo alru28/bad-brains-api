@@ -298,6 +298,51 @@ paths:
                   location_id:
                     type: string
 
+  /favourites:
+    get:
+      tags: ["Maps Service"]
+      summary: Retrieve all favourite locations for a user
+      description: Retrieve a list of location IDs marked as favourites by the user.
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
+      responses:
+        "200":
+          description: Favourite locations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  favourite_locations:
+                    type: array
+                    items:
+                      type: string
+
+    post:
+      tags: ["Maps Service"]
+      summary: Add a location to favourites
+      description: Add a specific location to the user's list of favourites.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []  # JWT required for this endpoint
+      responses:
+        "200":
+          description: Location added to favourites successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  location_id:
+                    type: string
+
 components:
   securitySchemes:
     bearerAuth:
